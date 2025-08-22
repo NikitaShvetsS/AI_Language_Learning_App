@@ -1,0 +1,12 @@
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: language_learning
+    restart: always
+    environment:
+      POSTGRES_DB: postgres_language_learning
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"

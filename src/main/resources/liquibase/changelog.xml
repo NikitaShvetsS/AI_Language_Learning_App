@@ -1,0 +1,214 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+
+    <changeSet id="1-create-exercise-type-enum" author="NikitaShvets">
+        <sql>
+            CREATE TYPE exercise_type AS ENUM ('GAP_FILL', 'MCQ');
+        </sql>
+    </changeSet>
+
+    <changeSet id="2-create-level-enum" author="NikitaShvets">
+        <sql>
+            CREATE TYPE level AS ENUM ('A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2');
+        </sql>
+    </changeSet>
+
+    <changeSet id="3-create-pack-status-enum" author="NikitaShvets">
+        <sql>
+            CREATE TYPE pack_status AS ENUM ('PENDING', 'READY', 'FAILED');
+        </sql>
+    </changeSet>
+    <changeSet id="0-create-pgcrypto-extension" author="NikitaShvets">
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+        </sql>
+    </changeSet>
+
+    <changeSet id="create_table_users" author="NikitaShvets">
+        <createTable tableName="users">
+            <column name="uuid" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="first_name" type="VARCHAR(255)"/>
+            <column name="last_name" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password" type="VARCHAR(255)"/>
+           <column name="native_language" type="VARCHAR(255)"/>
+            <column name="target_language" type="VARCHAR(255)"/>
+            <column name="level" type="level"/>
+            <column name="created_at" type="timestamptz"/>
+        </createTable>
+        <createIndex tableName="users" indexName="idx_users_email" unique="true">
+            <column name="email"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="create-table-daily_packs" author="NikitaShvets">
+        <createTable tableName="daily_pack">
+            <column name="uuid" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pack_date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="pack_status">
+                <constraints nullable="false"/>
+            </column>
+            <column name="model_used" type="varchar(150)"/>
+            <column name="created_at" type="timestamptz"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="daily_pack"
+                baseColumnNames="user_id"
+                constraintName="fk_daily_pack_user"
+                referencedTableName="users"
+                referencedColumnNames="uuid"
+                onDelete="CASCADE"/>
+        <createIndex tableName="daily_pack" indexName="idx_daily_pack_user_date">
+            <column name="user_id"/>
+            <column name="pack_date"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="create-table-text-block" author="NikitaShvets">
+        <createTable tableName="text_block">
+            <column name="uuid" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="pack_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="language" type="varchar(255)"/>
+            <column name="content" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="level" type="level"/>
+            <column name="created_at" type="timestamptz"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="text_block"
+                baseColumnNames="pack_id"
+                constraintName="fk_text_block_pack"
+                referencedTableName="daily_pack"
+                referencedColumnNames="uuid"
+                onDelete="CASCADE"/>
+        <createIndex tableName="text_block" indexName="idx_text_block_pack">
+            <column name="pack_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="create-table-exercise" author="NikitaShvets">
+        <createTable tableName="exercise">
+            <column name="uuid" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="pack_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="exercise_type">
+                <constraints nullable="false"/>
+            </column>
+            <column name="prompt" type="text"/>
+            <column name="optional_json" type="jsonb"/>
+            <column name="answer" type="text"/>
+            <column name="max_score" type="int" defaultValueNumeric="1"/>
+            <column name="created_at" type="timestamptz"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="exercise"
+                baseColumnNames="pack_id"
+                constraintName="fk_exercise_pack"
+                referencedTableName="daily_pack"
+                referencedColumnNames="uuid"
+                onDelete="CASCADE"/>
+        <createIndex tableName="exercise" indexName="idx_exercise_pack">
+            <column name="pack_id"/>
+        </createIndex>
+    </changeSet>
+    
+    <changeSet id="create-table-vocab-block" author="NikitaShvets">
+        <createTable tableName="vocab_block">
+            <column name="uuid" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="word" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="translation" type="varchar(255)"/>
+            <column name="speech_part" type="varchar(50)"/>
+            <column name="source_pack_id" type="UUID"/>
+            <column name="times_seen" type="int" defaultValueNumeric="0"/>
+            <column name="is_known" type="boolean" defaultValueBoolean="false"/>
+            <column name="added_at" type="timestamptz"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="vocab_block"
+                baseColumnNames="user_id"
+                constraintName="fk_vocab_user"
+                referencedTableName="users"
+                referencedColumnNames="uuid"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="vocab_block"
+                baseColumnNames="source_pack_id"
+                constraintName="fk_vocab_source_pack"
+                referencedTableName="daily_pack"
+                referencedColumnNames="uuid"
+                onDelete="SET NULL"/>
+        <createIndex tableName="vocab_block" indexName="idx_vocab_user_word">
+            <column name="user_id"/>
+            <column name="word"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="create-table-progress" author="NikitaShvets">
+        <createTable tableName="progress">
+            <column name="uuid" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pack_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed" type="boolean" defaultValueBoolean="false"/>
+            <column name="score" type="int" defaultValueNumeric="0"/>
+            <column name="completed_at" type="timestamptz"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="progress"
+                baseColumnNames="user_id"
+                constraintName="fk_progress_user"
+                referencedTableName="users"
+                referencedColumnNames="uuid"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="progress"
+                baseColumnNames="pack_id"
+                constraintName="fk_progress_pack"
+                referencedTableName="daily_pack"
+                referencedColumnNames="uuid"
+                onDelete="CASCADE"/>
+        <createIndex tableName="progress" indexName="idx_progress_user_pack">
+            <column name="user_id"/>
+            <column name="pack_id"/>
+        </createIndex>
+    </changeSet>
+    
+</databaseChangeLog>
