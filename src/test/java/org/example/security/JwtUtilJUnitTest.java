@@ -2,6 +2,7 @@ package org.example.security;
 
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.List;
@@ -10,6 +11,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+
+@SpringBootTest
 public class JwtUtilJUnitTest {
     @Test
     void generateToken_shouldReturnToken() {
